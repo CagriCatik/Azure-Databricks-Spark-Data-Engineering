@@ -1,0 +1,235 @@
+# ============================================================================
+# Zensical configuration for "Azure Databricks for Data Engineers".
+# Docs: https://zensical.org/docs/setup/basics/
+# ============================================================================
+
+[project]
+site_name = "Azure Databricks for Data Engineers"
+site_description = "Course documentation: building data engineering solutions on Azure Databricks with Apache Spark, Delta Lake, Unity Catalog, and Lakeflow Jobs."
+site_author = "mccatik"
+
+# The canonical URL for the site. Update <user> and <repo> to match your
+# GitHub Pages URL, e.g. https://mccatik.github.io/Azure-Databricks-Spark-Data-Engineering/
+# site_url = "https://<user>.github.io/<repo>/"
+
+docs_dir = "docs"
+site_dir = "site"
+
+copyright = """
+Copyright &copy; 2026 - Azure Databricks for Data Engineers
+"""
+
+# ----------------------------------------------------------------------------
+# Explicit navigation. The first bare path in each section is the section's
+# index page (requires the "navigation.indexes" feature, enabled below).
+# ----------------------------------------------------------------------------
+nav = [
+    { "Home" = "index.md" },
+    { "Introduction" = [
+        "01_introduction/01_intro.md",
+        { "Course Structure" = "01_introduction/02_structure.md" },
+    ] },
+    { "Azure Subscription" = [
+        "02_subscription/01_azure-account.md",
+        { "Azure Portal Tour" = "02_subscription/02_azure-portal.md" },
+    ] },
+    { "Azure Databricks" = [
+        "03_databricks/01_intro.md",
+        { "Create a Workspace" = "03_databricks/02_creating-azure-databricks-overview.md" },
+        { "Workspace UI" = "03_databricks/03_databricks-user-interface.md" },
+        { "Architecture" = "03_databricks/04_databricks-architecture-overview.md" },
+    ] },
+    { "Databricks Compute" = [
+        "04_databricks-compute/01_overview.md",
+        { "Compute Types" = "04_databricks-compute/02_databricks-compute.md" },
+        { "Compute Configuration" = "04_databricks-compute/03_compute-configuration.md" },
+        { "Creating a Cluster" = "04_databricks-compute/04_creating-databricks-cluster.md" },
+        { "Troubleshooting" = "04_databricks-compute/05_troubleshooting.md" },
+    ] },
+    { "Databricks Notebooks" = [
+        "05_databricks-notebook/01_overview.md",
+        { "Working with Notebooks" = "05_databricks-notebook/02_notebooks.md" },
+        { "Magic Commands" = "05_databricks-notebook/03_magic-commands.md" },
+        { "Databricks Utilities" = "05_databricks-notebook/04_utilities.md" },
+        { "Debugging Notebooks" = "05_databricks-notebook/05_debugging.md" },
+    ] },
+    { "Unity Catalog" = [
+        "06_unity-catalog/01_intro.md",
+        { "Object Model" = "06_unity-catalog/02_object-model.md" },
+        { "Account Console & Metastore" = "06_unity-catalog/03_account-console.md" },
+        { "Creating a Metastore" = "06_unity-catalog/04_create-metastore.md" },
+        { "Cloud Storage Concepts" = "06_unity-catalog/05_cloud-storage.md" },
+        { "Cloud Storage - Azure Setup" = "06_unity-catalog/06_cloud-storage-access-azure.md" },
+        { "Cloud Storage - Databricks Setup" = "06_unity-catalog/07_cloud-storage-access-databricks.md" },
+    ] },
+    { "Formula 1 Project" = [
+        "07_project-overview/01_overview.md",
+        { "The Formula 1 Data" = "07_project-overview/02_formula1-data.md" },
+        { "Project Requirements" = "07_project-overview/03_requirement.md" },
+        { "The Data Lakehouse" = "07_project-overview/04_data-lakehouse.md" },
+        { "Medallion Architecture" = "07_project-overview/05_medaillion-architecture.md" },
+        { "Solution Architecture" = "07_project-overview/06_architecture-overview.md" },
+    ] },
+    { "Project Setup" = [
+        "08_project-setup/01_overview.md",
+        { "Data Lake Environment" = "08_project-setup/02_data-lake-project-environment.md" },
+        { "Unity Catalog Environment" = "08_project-setup/03_unity-catalog-project-environment.md" },
+    ] },
+    { "Delta Lake" = [
+        "09_delta-lake/01_delta-lake.md",
+        { "Transaction Log" = "09_delta-lake/02_delta-transaction-log.md" },
+        { "Version History & Time Travel" = "09_delta-lake/03_delta-lake-version-history.md" },
+        { "ACID Transactions" = "09_delta-lake/04_support-acid-transactions.md" },
+    ] },
+    { "Data Ingestion (Bronze)" = [
+        "10_data-ingestion-bronze/01_data-ingestion-overview.md",
+        { "Ingestion Requirements" = "10_data-ingestion-bronze/02_requirement.md" },
+        { "DataFrameReader" = "10_data-ingestion-bronze/03_dataframe-reader.md" },
+        { "Specifying a Schema" = "10_data-ingestion-bronze/04_specify-schema.md" },
+        { "Adding Ingestion Metadata" = "10_data-ingestion-bronze/05_add-ingestion-metadata.md" },
+        { "DataFrameWriter" = "10_data-ingestion-bronze/06_dataframe-writer.md" },
+        { "Ingesting Races" = "10_data-ingestion-bronze/07_ingestion.md" },
+        { "Refactor: Config" = "10_data-ingestion-bronze/08_remove-hardcoded-values.md" },
+        { "Refactor: Helper Functions" = "10_data-ingestion-bronze/09_handle-repeated-logic.md" },
+        { "Ingesting Constructors (JSON)" = "10_data-ingestion-bronze/10_constructors-file.md" },
+        { "Ingesting Drivers (Nested JSON)" = "10_data-ingestion-bronze/11_drivers-file-ingestion.md" },
+        { "Ingesting Results (Multiple Files)" = "10_data-ingestion-bronze/12_results-file-ingestion.md" },
+        { "Ingesting Sprints (Multi-line JSON)" = "10_data-ingestion-bronze/13_sprints-file-ingestion.md" },
+    ] },
+    { "Data Transformation (Silver)" = [
+        "11_data-transformation-silver/01_overview.md",
+        { "Silver Requirements" = "11_data-transformation-silver/02_requirements.md" },
+        { "Reading & Selecting Columns" = "11_data-transformation-silver/03_read-table-select-columns.md" },
+        { "Standardizing Column Names" = "11_data-transformation-silver/04_column-standardisation.md" },
+        { "Data Quality Checks" = "11_data-transformation-silver/05_data-quality-checks.md" },
+        { "Value Standardization & Write" = "11_data-transformation-silver/06_data-standardisation-write.md" },
+        { "Transforming Races" = "11_data-transformation-silver/07_races-data.md" },
+        { "Transforming Constructors" = "11_data-transformation-silver/08_constructors-data.md" },
+        { "Transforming Drivers" = "11_data-transformation-silver/09_drivers-data.md" },
+        { "Transforming Results" = "11_data-transformation-silver/10_results-data.md" },
+        { "Transforming Sprints" = "11_data-transformation-silver/11_sprints-data.md" },
+        { "Lakeflow Jobs: Introduction" = "11_data-transformation-silver/12_lakeflow-jobs.md" },
+        { "Lakeflow Jobs: Creating a Job" = "11_data-transformation-silver/13_create-databricks-job.md" },
+        { "Lakeflow Jobs: Tasks" = "11_data-transformation-silver/14_tasks.md" },
+        { "Lakeflow Jobs: Task Dependencies" = "11_data-transformation-silver/15_task-dependencies.md" },
+        { "Lakeflow Jobs: Parallel Execution" = "11_data-transformation-silver/16_parallel-execution.md" },
+        { "Lakeflow Jobs: Debugging Failures" = "11_data-transformation-silver/17_debug-failed-lakeflow-job.md" },
+        { "Lakeflow Jobs: Completing the Job" = "11_data-transformation-silver/18_complete-job.md" },
+    ] },
+    { "Data Transformation (Gold)" = [
+        "12_data-transformation-gold/01_intro.md",
+        { "Reporting Requirements & Why Gold" = "12_data-transformation-gold/02_gold-layer.md" },
+        { "Dimensional Data Modeling" = "12_data-transformation-gold/03_dimensional-data-modeling.md" },
+        { "Building the Races Dimension" = "12_data-transformation-gold/04_dimension.md" },
+        { "Joins" = "12_data-transformation-gold/05_joins.md" },
+        { "Building the Constructors Dimension" = "12_data-transformation-gold/06_constructors-dimension.md" },
+        { "Building the Drivers Dimension" = "12_data-transformation-gold/07_drivers-dimension.md" },
+        { "Building the Results Fact Table" = "12_data-transformation-gold/08_results-fact.md" },
+        { "Adding Gold Tasks to the Job" = "12_data-transformation-gold/09_gold-layer-tasks.md" },
+        { "Scheduled Trigger" = "12_data-transformation-gold/10_schedule-trigger.md" },
+        { "File Arrival Trigger" = "12_data-transformation-gold/11_file-events-trigger.md" },
+        { "Table Update Trigger" = "12_data-transformation-gold/12_table-update-trigger.md" },
+        { "Job Notifications" = "12_data-transformation-gold/13_job-notifications.md" },
+    ] },
+    { "Data Analytics" = [
+        "13_data-analytics/01_intro.md",
+        { "Driver Standings View" = "13_data-analytics/02_driver-standings-view.md" },
+        { "Constructor Standings View" = "13_data-analytics/03_constructor-standings-view.md" },
+        { "Introduction to Databricks SQL" = "13_data-analytics/04_sql_intro.md" },
+        { "SQL Warehouses" = "13_data-analytics/05_sql-warehouse.md" },
+        { "SQL Editor" = "13_data-analytics/06_sql-editor.md" },
+        { "Driver Standings Dashboard" = "13_data-analytics/07_driver-standings-dashboard.md" },
+        { "Constructor Standings Dashboard" = "13_data-analytics/08_constructor-standings-dashboard.md" },
+        { "Dominant Driver Analysis" = "13_data-analytics/09_dominant-driver-analysis-analysis.md" },
+        { "Dominant Drivers Dashboard" = "13_data-analytics/10_dominant-drivers-dashboard.md" },
+        { "Dominant Teams Dashboard" = "13_data-analytics/11_build-dominant-teams-dashboard.md" },
+        { "AI/BI Genie" = "13_data-analytics/12_ai-bi-genie.md" },
+    ] },
+]
+
+# ----------------------------------------------------------------------------
+# Theme
+# ----------------------------------------------------------------------------
+[project.theme]
+# Use "classic" for the traditional Material for MkDocs look; "modern" is default.
+# variant = "classic"
+language = "en"
+features = [
+    "announce.dismiss",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    "toc.follow",
+]
+
+# Light/dark color schemes with a toggle.
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "deep-orange"
+accent = "orange"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "deep-orange"
+accent = "orange"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+# ----------------------------------------------------------------------------
+# Markdown extensions
+# ----------------------------------------------------------------------------
+[project.markdown_extensions.abbr]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.def_list]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.tables]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.betterem]
+[project.markdown_extensions.pymdownx.caret]
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.emoji]
+emoji_generator = "zensical.extensions.emoji.to_svg"
+emoji_index = "zensical.extensions.emoji.twemoji"
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+[project.markdown_extensions.pymdownx.inlinehilite]
+[project.markdown_extensions.pymdownx.keys]
+[project.markdown_extensions.pymdownx.magiclink]
+[project.markdown_extensions.pymdownx.mark]
+[project.markdown_extensions.pymdownx.smartsymbols]
+# Mermaid diagrams are rendered via the superfences custom fence below.
+[project.markdown_extensions.pymdownx.superfences]
+custom_fences = [
+    { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+combine_header_slug = true
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+[project.markdown_extensions.pymdownx.tilde]

@@ -1,0 +1,55 @@
+# Builds the Zensical documentation site and deploys it to GitHub Pages.
+#
+# One-time setup in your GitHub repository:
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+#
+# The site is rebuilt and published on every push to the main/master branch.
+name: Deploy documentation
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  # Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+# Permissions required by the GitHub Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment; don't cancel in-progress runs.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build site
+        run: zensical build --clean
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
