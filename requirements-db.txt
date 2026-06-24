@@ -1,0 +1,21 @@
+# Databricks local / quasi-local development
+databricks-connect
+databricks-sdk
+databricks-cli
+
+# Local development tools
+pytest
+ruff
+mypy
+
+# Configuration / environment handling
+python-dotenv
+PyYAML
+
+# Data utilities commonly useful around Spark jobs
+pandas
+pyarrow
+
+# Optional: notebooks in VS Code
+ipykernel
+jupyter
