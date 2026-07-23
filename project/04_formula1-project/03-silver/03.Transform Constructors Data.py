@@ -10,6 +10,11 @@
 # MAGIC 1. Transform values of column `nationality` to Title Case
 # MAGIC 1. Write the transformed data to silver `constructors` table
 # MAGIC
+# MAGIC This notebook builds the silver `constructors` table: bronze data cleaned,
+# MAGIC renamed, and de-duplicated on `constructor_id` so it can be joined by
+# MAGIC `nationality` against the gold `ref_nationality_region` reference table (see
+# MAGIC `04-gold/02.Build Constructors Dimension`). As with the rest of this project
+# MAGIC variant, the final write is a full overwrite - no incremental/batch tracking.
 
 # COMMAND ----------
 
@@ -44,7 +49,12 @@ constructors_df = spark.table(bronze_table)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
+# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
+# MAGIC
+# MAGIC `url` is a link back to the source website with no analytical value. Since it
+# MAGIC is the only column being removed, `.drop("url")` is a simpler equivalent to
+# MAGIC whitelisting every other column with `.select(...)` (the approach used
+# MAGIC elsewhere in this folder, e.g. `circuits`/`races`).
 
 # COMMAND ----------
 
@@ -56,6 +66,12 @@ constructors_dropped_df = constructors_df.drop("url")
 # MAGIC #### Step 3 & 4 - Standardise Column Names
 # MAGIC - Standardise column names using snake_case (`constructorId` → `constructor_id`)
 # MAGIC - Rename columns to make them more meaningful (`name` → `constructor_name`)
+# MAGIC
+# MAGIC Bronze mirrors the source API's camelCase fields as-is; silver renames them to
+# MAGIC snake_case, the convention expected by Spark SQL, Delta table columns, and
+# MAGIC downstream BI tools. `name` is also renamed to `constructor_name` since a bare
+# MAGIC `name` column would be ambiguous once this table sits alongside `drivers`
+# MAGIC (which has its own `driver_name`) in gold-layer queries.
 
 # COMMAND ----------
 
@@ -75,6 +91,10 @@ display(constructors_renamed_df)
 
 # MAGIC %md
 # MAGIC #### Step 5 - Remove duplicate records
+# MAGIC
+# MAGIC `constructor_id` is the business key gold-layer joins rely on (see
+# MAGIC `04-gold/02.Build Constructors Dimension`). `dropDuplicates` is scoped to it so
+# MAGIC any re-ingested duplicate rows collapse to a single record per constructor.
 
 # COMMAND ----------
 
@@ -86,8 +106,18 @@ display(constructors_distinct_df)
 
 # COMMAND ----------
 
+# Sanity check: how many duplicate rows were collapsed by dropDuplicates.
+display(constructors_renamed_df.count() - constructors_distinct_df.count())
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC #### Step 6 - Transform values of column `nationality` to Title Case
+# MAGIC
+# MAGIC Source values arrive inconsistently cased depending on the feed. `F.initcap()`
+# MAGIC normalizes this free-text display column to Title Case for consistent
+# MAGIC presentation, and so it matches cleanly when joined against the `nationality`
+# MAGIC column in the gold `ref_nationality_region` reference table.
 
 # COMMAND ----------
 
@@ -104,6 +134,10 @@ display(constructors_final_df)
 
 # MAGIC %md
 # MAGIC #### Step 7 - Write the transformed data to silver `constructors` table
+# MAGIC
+# MAGIC `mode('overwrite')` fully replaces the table on every run - the full-refresh
+# MAGIC strategy used throughout this project variant (see
+# MAGIC `05_formula1-project-incremental-load` for the MERGE/batch-tracking variant).
 
 # COMMAND ----------
 

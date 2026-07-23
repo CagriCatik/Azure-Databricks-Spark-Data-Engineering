@@ -2,10 +2,19 @@
 # MAGIC %md
 # MAGIC # Ingest constructors.json file
 # MAGIC 1. Read the file using spark dataframe reader API
-# MAGIC 1. Add Metadata Columns 
+# MAGIC 1. Add Metadata Columns
 # MAGIC     - Source File
 # MAGIC     - Ingestion Timestamp
-# MAGIC 1. Write to bronze delta table    
+# MAGIC 1. Write to bronze delta table
+# MAGIC
+# MAGIC This notebook is parameterized by `p_batch_id`: each batch's raw files
+# MAGIC live in their own numbered subfolder under `landing_folder_path`, e.g.
+# MAGIC `.../files/1/constructors.json`, `.../files/2/constructors.json`. The
+# MAGIC write step uses `write_to_bronze` (`00-common/02.bronze-helpers`),
+# MAGIC which overwrites only this batch's own partition of the
+# MAGIC `constructors` bronze table via Delta's `replaceWhere` - re-running
+# MAGIC this notebook for one batch never touches any other batch's rows
+# MAGIC already loaded.
 
 # COMMAND ----------
 

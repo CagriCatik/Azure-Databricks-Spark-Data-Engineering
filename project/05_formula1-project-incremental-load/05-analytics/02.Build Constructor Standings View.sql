@@ -16,6 +16,31 @@
 -- MAGIC 1. number of wins
 -- MAGIC 1. number of podiums
 -- MAGIC 1. standing position
+-- MAGIC
+-- MAGIC #### Grain and ranking
+-- MAGIC One row per `season` + `constructor_id`, aggregated across every
+-- MAGIC `fact_session_results` row for that constructor in that season (race and
+-- MAGIC sprint sessions alike, and across both of the constructor's drivers).
+-- MAGIC `standing` is computed with
+-- MAGIC `RANK() OVER (PARTITION BY season ORDER BY total_points DESC, number_of_wins DESC)`:
+-- MAGIC constructors tied on both points and wins receive the same standing, and the
+-- MAGIC position immediately after a tie is skipped by the number of tied rows
+-- MAGIC (e.g. two constructors tied for 1st are both `standing = 1`, the next
+-- MAGIC constructor is `standing = 3`) — the same convention used for real
+-- MAGIC motorsport/sports league standings. `RANK()` is used deliberately instead of
+-- MAGIC `ROW_NUMBER()` (which would arbitrarily break every tie) or `DENSE_RANK()`
+-- MAGIC (which would not leave a gap after a tie).
+-- MAGIC
+-- MAGIC #### Why a view, not a table
+-- MAGIC This is a `VIEW`, not a materialized table, so it always reflects whatever
+-- MAGIC is currently in gold with zero extra orchestration: as soon as
+-- MAGIC `fact_session_results` is merged with a new batch, the next query against
+-- MAGIC this view picks up the change immediately, with no separate refresh step
+-- MAGIC and no risk of the standings drifting out of sync with the fact/dimension
+-- MAGIC tables underneath. Re-aggregating on every query is cheap at Formula 1's
+-- MAGIC data volume (tens of thousands of result rows, not big data), so there is no
+-- MAGIC practical reason to trade that always-fresh guarantee for a materialized
+-- MAGIC table that would need its own incremental refresh logic.
 
 -- COMMAND ----------
 
@@ -27,7 +52,7 @@
 
 -- COMMAND ----------
 
-CREATE OR REPLACE VIEW formula1.gold.v_constructor_standing
+CREATE OR REPLACE VIEW formula1_incr.gold.v_constructor_standing
 AS
 WITH constructor_session_summary
 AS
@@ -39,13 +64,13 @@ AS
         SUM(r.points) AS total_points,
         COUNT_IF(r.is_win) AS number_of_wins,
         COUNT_IF(r.is_podium) AS number_of_podiums
-    FROM formula1.gold.fact_session_results r
-    JOIN formula1.gold.dim_constructors c
-      ON r.constructor_id = c.constructor_id 
+    FROM formula1_incr.gold.fact_session_results r
+    JOIN formula1_incr.gold.dim_constructors c
+      ON r.constructor_id = c.constructor_id
   GROUP BY r.season,
         c.constructor_id,
         c.constructor_name,
-        c.nationality)    
+        c.nationality)
 SELECT season,
        constructor_id,
        constructor_name,
@@ -60,4 +85,9 @@ SELECT season,
 
 -- COMMAND ----------
 
-SELECT * FROM formula1.gold.v_constructor_standing WHERE season = 2025
+-- MAGIC %md
+-- MAGIC #### Validation - spot check the current season's standings
+
+-- COMMAND ----------
+
+SELECT * FROM formula1_incr.gold.v_constructor_standing WHERE season = 2025

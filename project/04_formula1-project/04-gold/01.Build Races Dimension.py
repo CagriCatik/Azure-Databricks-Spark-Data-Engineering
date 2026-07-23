@@ -2,6 +2,15 @@
 # MAGIC %md
 # MAGIC # Build Races Dimension
 # MAGIC
+# MAGIC Builds the `dim_races` dimension: one row per race (`season` + `round`),
+# MAGIC enriched with the circuit it was held at. A **dimension** describes a
+# MAGIC business entity - "which race, at which track, on which date" - as
+# MAGIC opposed to a **fact table**, which records measurable events (see
+# MAGIC `04.Build Results Fact` for the fact side of this model). Race and
+# MAGIC circuit are separate silver entities linked by `circuit_id`;
+# MAGIC denormalizing them here means every downstream report gets circuit
+# MAGIC details for free, without repeating the join.
+# MAGIC
 # MAGIC 1. Read silver `races` table
 # MAGIC 1. Read silver `circuits` table
 # MAGIC 1. Join the data from `races` with `circuits` using `circuit_id`
@@ -66,8 +75,13 @@ races_df = spark.table(f"{catalog_name}.{silver_schema}.races")
 # MAGIC   1. races.race_name 
 # MAGIC   1. races.race_date 
 # MAGIC   1. circuits.circuit_name 
-# MAGIC   1. circuits.locality 
+# MAGIC   1. circuits.locality
 # MAGIC   1. circuits.country
+# MAGIC
+# MAGIC An `inner` join is used deliberately: every race in `silver.races` is
+# MAGIC expected to reference a valid `circuit_id`, so a race that fails to match
+# MAGIC a circuit signals a data-quality problem upstream rather than a case that
+# MAGIC should be silently kept with null circuit columns.
 
 # COMMAND ----------
 
@@ -97,6 +111,11 @@ display(dim_races_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_races` table
+# MAGIC
+# MAGIC `overwrite` fully replaces the table on every run - the full-refresh
+# MAGIC strategy used throughout this project. `dim_races` is small (one row per
+# MAGIC race) and cheap to rebuild from the current silver snapshot each time, so
+# MAGIC there is no need for incremental merge/upsert logic here.
 
 # COMMAND ----------
 

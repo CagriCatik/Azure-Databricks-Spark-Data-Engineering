@@ -5,10 +5,13 @@
 # MAGIC 1. Keep only the columns required for analytics (Drop `url` column)
 # MAGIC 1. Standardise column names using snake_case (`constructorId` → `constructor_id`, `driverId` → `driver_id`, `raceName` → `race_name`, `positionText` → `finish_position_text`)
 # MAGIC 1. Rename columns to make them more meaningful (`date` → `race_date`, `grid` → `grid_position`, `laps` → `completed_laps`, `number` → `car_number`, `position` → `finish_position`)
-# MAGIC 1. Filter out rows where `season`, `round`, `custructor_id` or `driver_id` is null (business key validation)
+# MAGIC 1. Filter out rows where `season`, `round`, `constructor_id` or `driver_id` is null (business key validation)
 # MAGIC 1. Remove duplicate records
 # MAGIC 1. Transform values of column `race_name` to Title Case
 # MAGIC 1. Write the transformed data to silver `results` table
+# MAGIC
+# MAGIC > **Note on the three "Transform Results Data" notebooks in this folder**
+# MAGIC This variant shows the same transformation as `05.Transform Results Data.py` written as one fully-chained expression, for readers comparing coding styles. It intentionally reflects the **original full-refresh version** of the notebook - it does not accept a `p_batch_id` widget, does not filter bronze by batch_id, and writes with a plain `overwrite` instead of merging through `write_to_silver`. It is kept for style comparison only and is not part of the incremental pipeline; the actual incremental notebook is `05.Transform Results Data.py` (no suffix). `05.Transform Results Data (Step-by-Step).py` shows the same full-refresh logic broken out into named intermediate DataFrames.
 
 # COMMAND ----------
 
@@ -70,7 +73,7 @@ results_df = (
             F.col("season").isNotNull() &
             F.col("round").isNotNull() &
             F.col("constructor_id").isNotNull() &
-            F.col("driver_id").isNotNull() 
+            F.col("driver_id").isNotNull()
         )
        .dropDuplicates(["season", "round", "constructor_id", "driver_id"])
        .withColumn('race_name', F.initcap(F.col("race_name")))

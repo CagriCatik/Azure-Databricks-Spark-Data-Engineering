@@ -2,6 +2,12 @@
 # MAGIC %md
 # MAGIC # Build Races Dimension
 # MAGIC
+# MAGIC Builds the gold `dim_races` dimension at a grain of one row per race event
+# MAGIC (business key: `season` + `round`), enriching each race with its circuit's
+# MAGIC venue details. This is a Type 1 dimension: incoming batches overwrite the
+# MAGIC existing attributes of a race (e.g. a corrected date) rather than
+# MAGIC preserving history.
+# MAGIC
 # MAGIC 1. Read silver `races` table
 # MAGIC 1. Read silver `circuits` table
 # MAGIC 1. Join the data from `races` with `circuits` using `circuit_id`
@@ -70,6 +76,11 @@ target_table = f"{catalog_name}.{gold_schema}.dim_races"
 # MAGIC #### Step 1 - Read source tables
 # MAGIC - `circuits`
 # MAGIC - `races`
+# MAGIC
+# MAGIC Both reads are filtered to `batch_id = v_batch_id` so this run only
+# MAGIC processes the rows that landed in the current batch — earlier batches were
+# MAGIC already merged into gold by prior runs, and rerunning this notebook for the
+# MAGIC same batch_id simply reprocesses that same bounded slice of data.
 
 # COMMAND ----------
 
@@ -90,7 +101,11 @@ races_df = (
 
 # MAGIC %md
 # MAGIC #### Step 2 - Join `races` with `circuits` using `circuit_id`
-# MAGIC Select the following columns  
+# MAGIC An inner join is used deliberately: every race is expected to reference a
+# MAGIC valid circuit, so a race whose circuit didn't load in this batch is
+# MAGIC excluded from gold rather than landing there with a null venue.
+# MAGIC
+# MAGIC Select the following columns
 # MAGIC   1. races.season 
 # MAGIC   1. races.round 
 # MAGIC   1. races.race_name 
@@ -127,6 +142,12 @@ display(dim_races_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_races` table
+# MAGIC
+# MAGIC `write_to_gold` merges on the business key (`season`, `round`): a matching
+# MAGIC row has only the listed `columns_to_update` overwritten, and a new race is
+# MAGIC inserted otherwise. `created_timestamp` / `updated_timestamp` are added by
+# MAGIC the helper itself — `created_timestamp` is stamped once on insert and never
+# MAGIC touched by later merges, so it reflects when the race was first loaded.
 
 # COMMAND ----------
 

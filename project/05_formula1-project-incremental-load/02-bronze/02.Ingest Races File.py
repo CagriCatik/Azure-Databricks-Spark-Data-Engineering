@@ -2,10 +2,18 @@
 # MAGIC %md
 # MAGIC # Ingest races.csv file
 # MAGIC 1. Read the file using spark dataframe reader API
-# MAGIC 1. Add Metadata Columns 
+# MAGIC 1. Add Metadata Columns
 # MAGIC     - Source File
 # MAGIC     - Ingestion Timestamp
-# MAGIC 1. Write to bronze delta table    
+# MAGIC 1. Write to bronze delta table
+# MAGIC
+# MAGIC This notebook is parameterized by `p_batch_id`: each batch's raw files
+# MAGIC live in their own numbered subfolder under `landing_folder_path`, e.g.
+# MAGIC `.../files/1/races.csv`, `.../files/2/races.csv`. The write step uses
+# MAGIC `write_to_bronze` (`00-common/02.bronze-helpers`), which overwrites
+# MAGIC only this batch's own partition of the `races` bronze table via
+# MAGIC Delta's `replaceWhere` - re-running this notebook for one batch never
+# MAGIC touches any other batch's rows already loaded.
 
 # COMMAND ----------
 

@@ -2,7 +2,13 @@
 # MAGIC %md
 # MAGIC # Environment Variables and Functions
 # MAGIC
-# MAGIC This notebook is designed to be imported with `%run`.
+# MAGIC This notebook is designed to be imported with `%run`, not run as a standalone
+# MAGIC step on its own. `%run` executes a notebook's cells inline, inside the caller's
+# MAGIC own Python process and Spark session - which is exactly why every name defined
+# MAGIC here (`env`, `print_env_info`, `get_base_path`, `config`, `print_config`) becomes
+# MAGIC directly usable in whichever notebook imports it, with no extra syntax. See
+# MAGIC `02_magic_commands.py` in this folder for the full `%run` vs
+# MAGIC `dbutils.notebook.run()` comparison.
 # MAGIC
 # MAGIC It defines:
 # MAGIC
@@ -10,6 +16,11 @@
 # MAGIC - A helper function to print runtime information
 # MAGIC - A helper function to build environment-specific paths
 # MAGIC - A small configuration dictionary
+# MAGIC
+# MAGIC This notebook intentionally contains no credentials or connection strings. If a
+# MAGIC shared setup notebook like this one ever needed one, it should be fetched with
+# MAGIC `dbutils.secrets.get(...)` (see `03_db_utilities.py`) at the point of use, never
+# MAGIC hardcoded here.
 
 # COMMAND ----------
 
@@ -103,4 +114,12 @@ print_config(config)
 # MAGIC get_base_path("dev")
 # MAGIC ```
 # MAGIC
-# MAGIC Keep shared setup notebooks small and explicit. Avoid hiding too much logic behind `%run`.
+# MAGIC Keep shared setup notebooks small and explicit. Avoid hiding too much logic
+# MAGIC behind `%run`.
+# MAGIC
+# MAGIC One more thing worth noticing: this notebook never calls
+# MAGIC `dbutils.notebook.exit(...)`, on purpose - it is meant to be inlined with `%run`,
+# MAGIC not launched with `dbutils.notebook.run()`. If something did call it with
+# MAGIC `dbutils.notebook.run()` instead, none of the variables or functions above would
+# MAGIC be shared back to the caller, and the returned result string would simply be
+# MAGIC empty - see `03_db_utilities.py` for that contrast in practice.

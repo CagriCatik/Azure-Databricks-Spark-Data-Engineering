@@ -2,6 +2,12 @@
 # MAGIC %md
 # MAGIC # Build Constructors Dimension
 # MAGIC
+# MAGIC Builds the gold `dim_constructors` dimension at a grain of one row per
+# MAGIC `constructor_id`, enriching each constructor with a geographic `region`
+# MAGIC derived from its `nationality`. Like the other gold dimensions this is a
+# MAGIC Type 1 dimension — a later batch overwrites a constructor's attributes
+# MAGIC rather than versioning them.
+# MAGIC
 # MAGIC 1. Read silver `constructors` table
 # MAGIC 1. Read gold `ref_nationality_region` table
 # MAGIC 1. Join the data from `constructors` with `ref_nationality_region` using `nationality`
@@ -72,7 +78,12 @@ ref_nationality_region_df = spark.table(f"{catalog_name}.{gold_schema}.ref_natio
 
 # MAGIC %md
 # MAGIC #### Step 2 - Join `constructors` with `nationality_region_df` using `nationality`
-# MAGIC Select the following columns   
+# MAGIC A `left` join is used deliberately: if a constructor's `nationality` is not
+# MAGIC (yet) present in `ref_nationality_region` (see notebook `91`), the
+# MAGIC constructor is still written to gold with `nationality_region` set to
+# MAGIC `null` rather than being silently dropped from the dimension.
+# MAGIC
+# MAGIC Select the following columns
 # MAGIC 1. constructors.constructor_id 
 # MAGIC 1. constructors.constructor_name 
 # MAGIC 1. constructors.nationality 
@@ -103,6 +114,10 @@ display(dim_constructors_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_constructors` table
+# MAGIC
+# MAGIC Merges on the business key `constructor_id`. `created_timestamp` is stamped
+# MAGIC only on first insert by `write_to_gold`; every other listed column is
+# MAGIC refreshed whenever a matching row is merged again.
 
 # COMMAND ----------
 

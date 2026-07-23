@@ -5,10 +5,13 @@
 # MAGIC 1. Keep only the columns required for analytics (Drop `url` column)
 # MAGIC 1. Standardise column names using snake_case (`constructorId` → `constructor_id`, `driverId` → `driver_id`, `raceName` → `race_name`, `positionText` → `finish_position_text`)
 # MAGIC 1. Rename columns to make them more meaningful (`date` → `race_date`, `grid` → `grid_position`, `laps` → `completed_laps`, `number` → `car_number`, `position` → `finish_position`)
-# MAGIC 1. Filter out rows where `season`, `round`, `custructor_id` or `driver_id` is null (business key validation)
+# MAGIC 1. Filter out rows where `season`, `round`, `constructor_id` or `driver_id` is null (business key validation)
 # MAGIC 1. Remove duplicate records
 # MAGIC 1. Transform values of column `race_name` to Title Case
 # MAGIC 1. Write the transformed data to silver `results` table
+# MAGIC
+# MAGIC > **Note on the three "Transform Results Data" notebooks in this folder**
+# MAGIC This variant shows the same transformation as `05.Transform Results Data.py` broken out into named intermediate DataFrames (one per step), for readers who prefer to inspect each stage separately. It intentionally reflects the **original full-refresh version** of the notebook - it does not accept a `p_batch_id` widget, does not filter bronze by batch_id, and writes with a plain `overwrite` instead of merging through `write_to_silver`. It is kept for step-by-step readability only and is not part of the incremental pipeline; the actual incremental notebook is `05.Transform Results Data.py` (no suffix). `05.Transform Results Data (Fully-Chained).py` shows the same full-refresh logic as a single chained expression.
 
 # COMMAND ----------
 
@@ -43,7 +46,7 @@ results_df = spark.table(bronze_table)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
+# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
 
 # COMMAND ----------
 
@@ -92,7 +95,7 @@ results_renamed_df = (
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 5 - Filter out rows where `season`, `round`, `custructor_id` or `driver_id` is null (business key validation)
+# MAGIC #### Step 5 - Filter out rows where `season`, `round`, `constructor_id` or `driver_id` is null (business key validation)
 
 # COMMAND ----------
 
@@ -102,7 +105,7 @@ results_valid_df = (
             F.col("season").isNotNull() &
             F.col("round").isNotNull() &
             F.col("constructor_id").isNotNull() &
-            F.col("driver_id").isNotNull() 
+            F.col("driver_id").isNotNull()
         )
 )
 

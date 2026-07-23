@@ -2,10 +2,18 @@
 # MAGIC %md
 # MAGIC # Ingest circuits.csv file
 # MAGIC 1. Read the file using spark dataframe reader API
-# MAGIC 1. Add Metadata Columns 
+# MAGIC 1. Add Metadata Columns
 # MAGIC     - Source File
 # MAGIC     - Ingestion Timestamp
-# MAGIC 1. Write to bronze delta table    
+# MAGIC 1. Write to bronze delta table
+# MAGIC
+# MAGIC This notebook is parameterized by `p_batch_id`: each batch's raw files
+# MAGIC live in their own numbered subfolder under `landing_folder_path`, e.g.
+# MAGIC `.../files/1/circuits.csv`, `.../files/2/circuits.csv`. The write step
+# MAGIC uses `write_to_bronze` (`00-common/02.bronze-helpers`), which
+# MAGIC overwrites only this batch's own partition of the `circuits` bronze
+# MAGIC table via Delta's `replaceWhere` - re-running this notebook for one
+# MAGIC batch never touches any other batch's rows already loaded.
 
 # COMMAND ----------
 
@@ -84,23 +92,6 @@ display(circuits_final_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write to bronze delta table
-
-# COMMAND ----------
-
-# circuits_final_df = circuits_final_df.withColumn("batch_id", F.lit(v_batch_id))
-
-# COMMAND ----------
-
-
-# (
-#     circuits_final_df
-#         .write
-#         .format('delta')
-#         .mode('overwrite')
-#         .partitionBy('batch_id')
-#         .option('replaceWhere', f"batch_id = '{v_batch_id}'")
-#         .saveAsTable(table_name)
-# )
 
 # COMMAND ----------
 

@@ -2,6 +2,13 @@
 # MAGIC %md
 # MAGIC # Build Drivers Dimension
 # MAGIC
+# MAGIC Builds the `dim_drivers` dimension: one row per driver, enriched with a
+# MAGIC geographic region derived from nationality. Like `dim_constructors`, this
+# MAGIC is a descriptive, slowly-changing business entity - drivers rarely change
+# MAGIC name or nationality - joined against the same shared reference table,
+# MAGIC `gold.ref_nationality_region` (see `91.Build Nationality Region
+# MAGIC Reference`).
+# MAGIC
 # MAGIC 1. Read silver `drivers` table
 # MAGIC 1. Read gold `ref_nationality_region` table
 # MAGIC 1. Join the data from `drivers` with `ref_nationality_region` using `nationality`
@@ -64,6 +71,12 @@ ref_nationality_region_df = spark.table(f"{catalog_name}.{gold_schema}.ref_natio
 # MAGIC 1. drivers.date_of_birth
 # MAGIC 1. drivers.nationality
 # MAGIC 1. ref_nationality_region.region
+# MAGIC
+# MAGIC As in `dim_constructors`, a `left` join is used because
+# MAGIC `ref_nationality_region` is a manually maintained lookup and may not cover
+# MAGIC every nationality yet - a `left` join keeps every driver and leaves
+# MAGIC `nationality_region` null for any unmapped nationality, instead of
+# MAGIC dropping the driver from the dimension entirely.
 
 # COMMAND ----------
 
@@ -79,7 +92,7 @@ dim_drivers_df = (
             drivers_df.driver_name,
             drivers_df.date_of_birth,
             drivers_df.nationality,
-            ref_nationality_region_df.region.alias("nationality_region")
+            ref_nationality_region_df.region.alias("nationality_region")  # aliased so it reads unambiguously as a nationality-derived attribute
         )
 )
 
@@ -91,6 +104,10 @@ display(dim_drivers_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_drivers` table
+# MAGIC
+# MAGIC `overwrite` fully replaces the table on every run - the same full-refresh
+# MAGIC strategy used across all gold notebooks in this project (see
+# MAGIC `01.Build Races Dimension` for the reasoning).
 
 # COMMAND ----------
 

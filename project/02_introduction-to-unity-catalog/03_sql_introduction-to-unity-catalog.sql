@@ -2,28 +2,39 @@
 -- MAGIC %md
 -- MAGIC # Unity Catalog in Databricks — SQL Tutorial
 -- MAGIC
--- MAGIC This notebook explains how to check, understand, and use Unity Catalog from a Databricks SQL notebook.
+-- MAGIC This is the pure-SQL companion to `01_uc_introduction.py` in this same
+-- MAGIC folder: the same `dev_catalog.learning` objects, the same day-to-day
+-- MAGIC workflow, but written entirely in `.sql` notebook cells with no Python at
+-- MAGIC all. See `01_uc_introduction.py` for the full explanation of what Unity
+-- MAGIC Catalog is and its complete object model (metastore, catalog, schema,
+-- MAGIC table, view, function, volume, storage credential, external location,
+-- MAGIC connection, share/recipient/provider) - this notebook goes straight to the
+-- MAGIC SQL, plus three topics that notebook doesn't cover in depth: **functions**
+-- MAGIC as a securable object, **comments and tags**, and **Delta Sharing** at a
+-- MAGIC conceptual level.
 -- MAGIC
--- MAGIC There are two different meanings when people say:
--- MAGIC
--- MAGIC **"Create Unity Catalog"**
--- MAGIC
--- MAGIC 1. **Create or enable the Unity Catalog metastore**
--- MAGIC    - Admin-level setup.
--- MAGIC    - Usually done in the Databricks Account Console.
--- MAGIC    - Required before a workspace can use Unity Catalog.
--- MAGIC
--- MAGIC 2. **Create a catalog inside Unity Catalog**
--- MAGIC    - User-level SQL operation.
--- MAGIC    - Done after the workspace is already attached to a Unity Catalog metastore.
+-- MAGIC For the admin-versus-user distinction (who creates a metastore vs. who
+-- MAGIC creates a catalog), see `02_uc_setup_concepts.py`. For external cloud
+-- MAGIC storage (storage credentials, external locations, external tables and
+-- MAGIC volumes over ADLS Gen2), see `04_sql_configure-access-to-cloud-storage.sql`.
 -- MAGIC
 -- MAGIC Unity Catalog hierarchy:
 -- MAGIC
--- MAGIC `text -- MAGIC Metastore -- MAGIC   Catalog -- MAGIC     Schema -- MAGIC       Table -- MAGIC       View -- MAGIC       Volume -- MAGIC `
+-- MAGIC ```text
+-- MAGIC Metastore
+-- MAGIC   Catalog
+-- MAGIC     Schema
+-- MAGIC       Table
+-- MAGIC       View
+-- MAGIC       Function
+-- MAGIC       Volume
+-- MAGIC ```
 -- MAGIC
 -- MAGIC Fully qualified object name:
 -- MAGIC
--- MAGIC `text -- MAGIC catalog.schema.table -- MAGIC `
+-- MAGIC ```text
+-- MAGIC catalog.schema.table
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -47,9 +58,13 @@ SELECT current_metastore();
 -- MAGIC
 -- MAGIC A catalog is the first-level namespace under the Unity Catalog metastore.
 -- MAGIC
--- MAGIC Example:
+-- MAGIC Example catalogs you will typically see:
 -- MAGIC
--- MAGIC `text -- MAGIC dev_catalog -- MAGIC main -- MAGIC samples -- MAGIC `
+-- MAGIC ```text
+-- MAGIC dev_catalog
+-- MAGIC main
+-- MAGIC samples
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -121,7 +136,9 @@ SELECT current_catalog();
 -- MAGIC
 -- MAGIC The full schema name is:
 -- MAGIC
--- MAGIC `text -- MAGIC dev_catalog.learning -- MAGIC `
+-- MAGIC ```text
+-- MAGIC dev_catalog.learning
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -152,7 +169,9 @@ SELECT current_catalog(), current_schema();
 -- MAGIC
 -- MAGIC Full table name:
 -- MAGIC
--- MAGIC `text -- MAGIC dev_catalog.learning.customers -- MAGIC `
+-- MAGIC ```text
+-- MAGIC dev_catalog.learning.customers
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -192,7 +211,9 @@ FROM customers;
 -- MAGIC
 -- MAGIC In production code, prefer the full name:
 -- MAGIC
--- MAGIC `text -- MAGIC catalog.schema.table -- MAGIC `
+-- MAGIC ```text
+-- MAGIC catalog.schema.table
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -216,6 +237,8 @@ DESCRIBE TABLE customers;
 -- MAGIC ## 14. Describe extended table metadata
 -- MAGIC
 -- MAGIC This shows more metadata, including ownership and storage-related details.
+-- MAGIC Check the `Type` field (`MANAGED` here) and the `Location` field, which
+-- MAGIC points inside the schema's managed storage location.
 
 -- COMMAND ----------
 
@@ -368,7 +391,11 @@ SHOW GRANTS ON TABLE dev_catalog.learning.customers;
 -- MAGIC
 -- MAGIC Typical read access requires:
 -- MAGIC
--- MAGIC `text -- MAGIC USE CATALOG on the catalog -- MAGIC USE SCHEMA on the schema -- MAGIC SELECT on the table or view -- MAGIC `
+-- MAGIC ```text
+-- MAGIC USE CATALOG on the catalog
+-- MAGIC USE SCHEMA on the schema
+-- MAGIC SELECT on the table or view
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -387,7 +414,9 @@ SHOW GRANTS ON TABLE dev_catalog.learning.customers;
 -- MAGIC %md
 -- MAGIC ## 24. Create a volume
 -- MAGIC
--- MAGIC Volumes are Unity Catalog objects for files.
+-- MAGIC Volumes are Unity Catalog objects for files - see `01_uc_introduction.py`
+-- MAGIC Section 14 for the managed-vs-external distinction. This creates a managed
+-- MAGIC volume.
 -- MAGIC
 -- MAGIC Use volumes for:
 -- MAGIC
@@ -399,7 +428,9 @@ SHOW GRANTS ON TABLE dev_catalog.learning.customers;
 -- MAGIC
 -- MAGIC Volume path format:
 -- MAGIC
--- MAGIC `text -- MAGIC /Volumes/catalog/schema/volume/ -- MAGIC `
+-- MAGIC ```text
+-- MAGIC /Volumes/catalog/schema/volume/
+-- MAGIC ```
 
 -- COMMAND ----------
 
@@ -461,31 +492,183 @@ AND table_name = 'customers';
 -- COMMAND ----------
 
 -- MAGIC %md
--- MAGIC ## 27. Admin setup versus user setup
+-- MAGIC ## 27. Functions as a securable object
 -- MAGIC
--- MAGIC Admin setup:
+-- MAGIC Unity Catalog governs SQL functions the same way it governs tables and
+-- MAGIC views: a function lives at `catalog.schema.function_name`, has an owner,
+-- MAGIC can be documented with a comment, and requires an explicit `EXECUTE` grant
+-- MAGIC before another principal can call it.
 -- MAGIC
--- MAGIC `text -- MAGIC Create Unity Catalog metastore -- MAGIC Assign metastore to workspace -- MAGIC Configure managed storage -- MAGIC Configure identities and groups -- MAGIC `
--- MAGIC
--- MAGIC User setup:
--- MAGIC
--- MAGIC `text -- MAGIC Create catalog -- MAGIC Create schema -- MAGIC Create table -- MAGIC Create view -- MAGIC Create volume -- MAGIC Grant permissions -- MAGIC Query data -- MAGIC `
+-- MAGIC This creates a small scalar SQL function that expands the two-letter
+-- MAGIC country codes already used in `customers`.
+
+-- COMMAND ----------
+
+CREATE OR REPLACE FUNCTION dev_catalog.learning.country_label(country_code STRING)
+RETURNS STRING
+COMMENT 'Expands a two-letter country code from customers.country into a display label'
+RETURN CASE country_code
+  WHEN 'UK' THEN 'United Kingdom'
+  WHEN 'US' THEN 'United States'
+  ELSE country_code
+END;
+
+-- COMMAND ----------
+
+SELECT
+  customer_id,
+  customer_name,
+  country,
+  dev_catalog.learning.country_label(country) AS country_label
+FROM customers;
+
+-- COMMAND ----------
+
+SHOW FUNCTIONS IN dev_catalog.learning;
+
+-- COMMAND ----------
+
+DESCRIBE FUNCTION EXTENDED dev_catalog.learning.country_label;
 
 -- COMMAND ----------
 
 -- MAGIC %md
--- MAGIC ## 28. Required permissions
+-- MAGIC Grants on a function work exactly like grants on a table - do not run this
+-- MAGIC unless you are allowed to manage permissions.
+
+-- COMMAND ----------
+
+SHOW GRANTS ON FUNCTION dev_catalog.learning.country_label;
+
+-- COMMAND ----------
+
+-- GRANT EXECUTE ON FUNCTION dev_catalog.learning.country_label TO `data-users`;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC ## 28. Document objects with comments and tags
+-- MAGIC
+-- MAGIC See `01_uc_introduction.py` Section 16 for why this matters - in short, it
+-- MAGIC keeps Catalog Explorer search useful as the catalog grows. Here are just the
+-- MAGIC commands, applied to this notebook's own table.
+
+-- COMMAND ----------
+
+COMMENT ON TABLE dev_catalog.learning.customers IS
+'Practice customer dimension for the Unity Catalog SQL learning module';
+
+-- COMMAND ----------
+
+ALTER TABLE dev_catalog.learning.customers
+ALTER COLUMN country COMMENT 'Free-text country label used for practice data only, not validated against ISO codes';
+
+-- COMMAND ----------
+
+ALTER TABLE dev_catalog.learning.customers
+SET TBLPROPERTIES ('data_owner' = 'data-engineering-training', 'pii' = 'false');
+
+-- COMMAND ----------
+
+-- Newer Databricks Runtime versions also support governed, searchable tags
+-- (distinct from free-form TBLPROPERTIES) on catalogs, schemas, tables, and
+-- columns, if tags are enabled for your metastore:
+-- ALTER TABLE dev_catalog.learning.customers SET TAGS ('sensitivity' = 'low');
+
+-- COMMAND ----------
+
+DESCRIBE TABLE EXTENDED customers;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC ## 29. Delta Sharing, conceptually
+-- MAGIC
+-- MAGIC Delta Sharing is Unity Catalog's mechanism for sharing live tables, views,
+-- MAGIC and volumes with recipients **outside** your Databricks account or
+-- MAGIC metastore, without copying any data. Three objects are involved:
+-- MAGIC
+-- MAGIC - **Share** - a named, curated bundle of objects you want to expose.
+-- MAGIC - **Recipient** - the consumer: another Databricks account (Unity
+-- MAGIC   Catalog-to-Unity-Catalog sharing) or an open recipient authenticated with
+-- MAGIC   a downloadable credential file, for non-Databricks consumers.
+-- MAGIC - **Provider** - from the recipient's side, the entity that shared data
+-- MAGIC   with them.
+-- MAGIC
+-- MAGIC Creating and managing shares is normally a data-owner or admin task, and
+-- MAGIC requires a recipient to already exist on the other side. The statements
+-- MAGIC below are illustrative only - do not run them as written.
+
+-- COMMAND ----------
+
+-- CREATE SHARE IF NOT EXISTS learning_share
+-- COMMENT 'Illustrative share exposing order_summary_public to a partner';
+--
+-- ALTER SHARE learning_share ADD TABLE dev_catalog.learning.order_summary_public;
+--
+-- CREATE RECIPIENT IF NOT EXISTS partner_recipient;
+--
+-- GRANT SELECT ON SHARE learning_share TO RECIPIENT partner_recipient;
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC ## 30. Admin setup versus user setup
+-- MAGIC
+-- MAGIC Brief recap - see `02_uc_setup_concepts.py` for the full breakdown,
+-- MAGIC including the Account Console walkthrough and workspace-catalog bindings.
+-- MAGIC
+-- MAGIC ```text
+-- MAGIC Admin setup (one-time, Account Console):
+-- MAGIC   Create Unity Catalog metastore
+-- MAGIC   Assign metastore to workspace
+-- MAGIC   Configure managed storage
+-- MAGIC   Configure identities and groups
+-- MAGIC
+-- MAGIC User setup (everyday, SQL):
+-- MAGIC   Create catalog
+-- MAGIC   Create schema
+-- MAGIC   Create table, view, function, volume
+-- MAGIC   Grant permissions
+-- MAGIC   Query data
+-- MAGIC ```
+
+-- COMMAND ----------
+
+-- MAGIC %md
+-- MAGIC ## 31. Required permissions
 -- MAGIC
 -- MAGIC To create and query Unity Catalog objects, you need privileges.
 -- MAGIC
 -- MAGIC Typical permissions:
 -- MAGIC
--- MAGIC `text -- MAGIC Metastore: -- MAGIC   CREATE CATALOG -- MAGIC -- MAGIC Catalog: -- MAGIC   USE CATALOG -- MAGIC   CREATE SCHEMA -- MAGIC -- MAGIC Schema: -- MAGIC   USE SCHEMA -- MAGIC   CREATE TABLE -- MAGIC   CREATE VIEW -- MAGIC   CREATE VOLUME -- MAGIC -- MAGIC Table or view: -- MAGIC   SELECT -- MAGIC   MODIFY -- MAGIC `
+-- MAGIC ```text
+-- MAGIC Metastore:
+-- MAGIC   CREATE CATALOG
+-- MAGIC
+-- MAGIC Catalog:
+-- MAGIC   USE CATALOG
+-- MAGIC   CREATE SCHEMA
+-- MAGIC
+-- MAGIC Schema:
+-- MAGIC   USE SCHEMA
+-- MAGIC   CREATE TABLE
+-- MAGIC   CREATE VIEW
+-- MAGIC   CREATE FUNCTION
+-- MAGIC   CREATE VOLUME
+-- MAGIC
+-- MAGIC Table or view:
+-- MAGIC   SELECT
+-- MAGIC   MODIFY
+-- MAGIC
+-- MAGIC Function:
+-- MAGIC   EXECUTE
+-- MAGIC ```
 
 -- COMMAND ----------
 
 -- MAGIC %md
--- MAGIC ## 29. Common errors
+-- MAGIC ## 32. Common errors
 -- MAGIC
 -- MAGIC ### Error: `Catalog does not exist`
 -- MAGIC
@@ -504,6 +687,7 @@ AND table_name = 'customers';
 -- MAGIC - missing `SELECT`
 -- MAGIC - missing `CREATE TABLE`
 -- MAGIC - missing `CREATE CATALOG`
+-- MAGIC - missing `EXECUTE` on a function
 -- MAGIC
 -- MAGIC ### Error: `Table not found`
 -- MAGIC
@@ -515,12 +699,14 @@ AND table_name = 'customers';
 -- MAGIC
 -- MAGIC Use fully qualified names to avoid ambiguity:
 -- MAGIC
--- MAGIC `text -- MAGIC catalog.schema.table -- MAGIC `
+-- MAGIC ```text
+-- MAGIC catalog.schema.table
+-- MAGIC ```
 
 -- COMMAND ----------
 
 -- MAGIC %md
--- MAGIC ## 30. Cleanup
+-- MAGIC ## 33. Cleanup
 -- MAGIC
 -- MAGIC Run this section only if you want to delete the practice objects.
 
@@ -535,6 +721,10 @@ AND table_name = 'customers';
 -- COMMAND ----------
 
 -- DROP VIEW IF EXISTS uk_customers;
+
+-- COMMAND ----------
+
+-- DROP FUNCTION IF EXISTS dev_catalog.learning.country_label;
 
 -- COMMAND ----------
 
@@ -560,16 +750,30 @@ AND table_name = 'customers';
 -- MAGIC You learned:
 -- MAGIC
 -- MAGIC - how to check whether a workspace is attached to a Unity Catalog metastore
--- MAGIC - the difference between creating a metastore and creating a catalog
--- MAGIC - how to create a catalog
--- MAGIC - how to create a schema
--- MAGIC - how to create managed tables
--- MAGIC - how to create views
--- MAGIC - how to inspect grants
--- MAGIC - how to create volumes
--- MAGIC - how to query Unity Catalog metadata
+-- MAGIC - how to create a catalog, schema, managed table, and view in pure SQL
+-- MAGIC - how to inspect and grant permissions on catalogs, schemas, and tables
+-- MAGIC - how to create a managed volume
+-- MAGIC - how to query Unity Catalog metadata via `system.information_schema`
+-- MAGIC - how functions are a governed securable object, with their own owner,
+-- MAGIC   comment, and `EXECUTE` privilege
+-- MAGIC - how to document objects with `COMMENT ON`, column comments, and
+-- MAGIC   `TBLPROPERTIES`
+-- MAGIC - what Delta Sharing's Share/Recipient/Provider objects are for, at a
+-- MAGIC   conceptual level
 -- MAGIC - how to clean up practice objects
 -- MAGIC
 -- MAGIC Core mental model:
 -- MAGIC
--- MAGIC `text -- MAGIC Admin enables Unity Catalog by creating or assigning a metastore. -- MAGIC Users work inside Unity Catalog by creating catalogs, schemas, tables, views, and volumes. -- MAGIC `
+-- MAGIC ```text
+-- MAGIC Admin enables Unity Catalog by creating or assigning a metastore.
+-- MAGIC Users work inside Unity Catalog by creating catalogs, schemas, tables,
+-- MAGIC views, functions, and volumes.
+-- MAGIC ```
+-- MAGIC
+-- MAGIC Continue in this folder with:
+-- MAGIC
+-- MAGIC - `01_uc_introduction.py` - the full object model, in Python and SQL
+-- MAGIC - `02_uc_setup_concepts.py` - the admin-vs-user setup boundary in depth
+-- MAGIC - `04_sql_configure-access-to-cloud-storage.sql` - storage credentials,
+-- MAGIC   external locations, and external tables/volumes over Azure Data Lake
+-- MAGIC   Storage

@@ -2,6 +2,12 @@
 # MAGIC %md
 # MAGIC # Build Drivers Dimension
 # MAGIC
+# MAGIC Builds the gold `dim_drivers` dimension at a grain of one row per
+# MAGIC `driver_id`, enriching each driver with a geographic `region` derived from
+# MAGIC `nationality`. `date_of_birth` and `nationality` are effectively immutable
+# MAGIC per driver, but the merge still refreshes them like any Type 1 attribute in
+# MAGIC case a data-quality correction arrives in a later batch.
+# MAGIC
 # MAGIC 1. Read silver `drivers` table
 # MAGIC 1. Read gold `ref_nationality_region` table
 # MAGIC 1. Join the data from `drivers` with `ref_nationality_region` using `nationality`
@@ -73,7 +79,12 @@ ref_nationality_region_df = spark.table(f"{catalog_name}.{gold_schema}.ref_natio
 
 # MAGIC %md
 # MAGIC #### Step 2 - Join `drivers` with `nationality_region_df` using `nationality`
-# MAGIC Select the following columns   
+# MAGIC A `left` join is used deliberately: if a driver's `nationality` is not (yet)
+# MAGIC present in `ref_nationality_region` (see notebook `91`), the driver is still
+# MAGIC written to gold with `nationality_region` set to `null` rather than being
+# MAGIC silently dropped from the dimension.
+# MAGIC
+# MAGIC Select the following columns
 # MAGIC 1. drivers.driver_id
 # MAGIC 1. drivers.driver_name
 # MAGIC 1. drivers.date_of_birth
@@ -106,6 +117,10 @@ display(dim_drivers_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_drivers` table
+# MAGIC
+# MAGIC Merges on the business key `driver_id`. `created_timestamp` is stamped only
+# MAGIC on first insert by `write_to_gold`; every other listed column is refreshed
+# MAGIC whenever a matching row is merged again.
 
 # COMMAND ----------
 

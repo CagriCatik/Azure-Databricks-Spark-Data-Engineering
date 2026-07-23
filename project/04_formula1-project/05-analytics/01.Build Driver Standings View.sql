@@ -2,6 +2,20 @@
 -- MAGIC %md
 -- MAGIC # Build Driver Standings
 -- MAGIC
+-- MAGIC Reporting view: aggregates the `fact_session_results` fact table up to
+-- MAGIC one row per season + driver, joined against the `dim_drivers` dimension
+-- MAGIC for descriptive attributes (name, nationality), and ranks drivers within
+-- MAGIC each season by points. This is a classic **star-schema rollup** - a fact
+-- MAGIC table at a fine grain (one row per driver per session) summarized up to
+-- MAGIC the grain a driver standings report actually needs (one row per driver
+-- MAGIC per season).
+-- MAGIC
+-- MAGIC Implemented as a `VIEW`, not a materialized table: standings are cheap to
+-- MAGIC compute on demand (a `GROUP BY` plus a window function over one fact
+-- MAGIC table), and a view always reflects the latest data the moment
+-- MAGIC `fact_session_results`/`dim_drivers` are refreshed - there is nothing to
+-- MAGIC rebuild or fall out of sync.
+-- MAGIC
 -- MAGIC #### Sources
 -- MAGIC 1. fact_session_results
 -- MAGIC 1. dim_drivers
@@ -27,6 +41,10 @@
 
 -- COMMAND ----------
 
+-- One row per season + driver: aggregate the fact table (grain = one row per
+-- driver, per session, per race) up to a season summary before ranking.
+-- Note: fact_session_results holds both RACE and SPRINT session rows, so
+-- COUNT(*)/SUM(points) below total across both session types for the season.
 CREATE OR REPLACE VIEW formula1.gold.v_driver_standing
 AS
 WITH driver_session_summary
@@ -37,19 +55,27 @@ AS
         d.nationality,
         COUNT(*) AS race_starts,
         SUM(r.points) AS total_points,
+        -- is_win / is_podium are booleans pre-computed on the fact table
+        -- (see 04-gold/04.Build Results Fact) - COUNT_IF just counts the
+        -- TRUE rows, no position-range logic needs repeating here.
         COUNT_IF(r.is_win) AS number_of_wins,
         COUNT_IF(r.is_podium) AS number_of_podiums
     FROM formula1.gold.fact_session_results r
     JOIN formula1.gold.dim_drivers d
-      ON r.driver_id = d.driver_id 
+      ON r.driver_id = d.driver_id
   GROUP BY r.season,
         d.driver_id,
         d.driver_name,
-        d.nationality)    
+        d.nationality)
 SELECT season,
        driver_id,
        driver_name,
        nationality,
+       -- Tie-break logic: rank by total points first, then by number of wins
+       -- as the first tiebreaker - the same convention F1's own championship
+       -- rules use. RANK() (rather than DENSE_RANK/ROW_NUMBER) means drivers
+       -- tied on both points and wins share the same standing, and the next
+       -- standing number is skipped accordingly (e.g. 1, 2, 2, 4).
        RANK() OVER (PARTITION BY season ORDER BY total_points DESC, number_of_wins DESC) AS standing,
        race_starts,
        total_points,

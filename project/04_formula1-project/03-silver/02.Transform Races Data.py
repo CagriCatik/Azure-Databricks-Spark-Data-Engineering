@@ -10,6 +10,12 @@
 # MAGIC 1. Transform values of column `race_name` to Title Case
 # MAGIC 1. Write the transformed data to silver `races` table
 # MAGIC
+# MAGIC This notebook builds the silver `races` table: one row per season/round, joined
+# MAGIC downstream to `circuits` by `circuit_id` to build the gold `dim_races` table (see
+# MAGIC `04-gold/01.Build Races Dimension`). Unlike some of the other silver notebooks in
+# MAGIC this folder, there is no explicit null-business-key filter step here - only
+# MAGIC de-duplication on `(season, round)`. As with the rest of this project variant,
+# MAGIC the final write is a full overwrite - no incremental/batch tracking.
 
 # COMMAND ----------
 
@@ -44,7 +50,10 @@ races_df = spark.table(bronze_table)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
+# MAGIC #### Step 2 - Keep only the columns required for analytics (Drop url column)
+# MAGIC
+# MAGIC `url` is a link back to the source website with no analytical value, so it is
+# MAGIC dropped simply by not selecting it here.
 
 # COMMAND ----------
 
@@ -64,6 +73,12 @@ races_selected_df = races_df.select(
 # MAGIC #### Step 3 & 4 - Standardise Column Names
 # MAGIC - Standardise column names using snake_case (`circuitId` → `circuit_id`, `raceName` → `race_name`)
 # MAGIC - Rename columns to make them more meaningful (`date` → `race_date`)
+# MAGIC
+# MAGIC Bronze mirrors the source API's camelCase fields as-is; silver renames them to
+# MAGIC snake_case, the convention expected by Spark SQL, Delta table columns, and
+# MAGIC downstream BI tools. `date` is also renamed to the more descriptive `race_date`
+# MAGIC to avoid ambiguity once this table is joined against other date-bearing tables
+# MAGIC in gold.
 
 # COMMAND ----------
 
@@ -84,10 +99,14 @@ display(races_renamed_df)
 
 # MAGIC %md
 # MAGIC #### Step 5 - Remove duplicate records
+# MAGIC
+# MAGIC `(season, round)` uniquely identifies a race - one Grand Prix per round per
+# MAGIC season - so `dropDuplicates` is scoped to those two columns to collapse any
+# MAGIC re-ingested duplicate rows down to a single record per race.
 
 # COMMAND ----------
 
-races_distinct_df = races_renamed_df.dropDuplicates(["season","round"])
+races_distinct_df = races_renamed_df.dropDuplicates(["season", "round"])
 
 # COMMAND ----------
 
@@ -95,8 +114,17 @@ display(races_distinct_df)
 
 # COMMAND ----------
 
+# Sanity check: how many duplicate rows were collapsed by dropDuplicates.
+display(races_renamed_df.count() - races_distinct_df.count())
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC #### Step 6 - Transform values of column `race_name` to Title Case
+# MAGIC
+# MAGIC Source values arrive inconsistently cased depending on the feed. `F.initcap()`
+# MAGIC normalizes this free-text display column to Title Case for consistent
+# MAGIC presentation in reports and dashboards.
 
 # COMMAND ----------
 
@@ -113,6 +141,10 @@ display(races_final_df)
 
 # MAGIC %md
 # MAGIC #### Step 7 - Write the transformed data to silver `races` table
+# MAGIC
+# MAGIC `mode('overwrite')` fully replaces the table on every run - the full-refresh
+# MAGIC strategy used throughout this project variant (see
+# MAGIC `05_formula1-project-incremental-load` for the MERGE/batch-tracking variant).
 
 # COMMAND ----------
 

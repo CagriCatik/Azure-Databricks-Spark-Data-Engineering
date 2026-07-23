@@ -2,6 +2,13 @@
 # MAGIC %md
 # MAGIC # Build Constructors Dimension
 # MAGIC
+# MAGIC Builds the `dim_constructors` dimension: one row per constructor (team),
+# MAGIC enriched with a geographic region derived from its nationality. The
+# MAGIC region lookup comes from `gold.ref_nationality_region` - a small,
+# MAGIC hand-curated reference table (see `91.Build Nationality Region
+# MAGIC Reference`), not an operational business entity, so this join is really
+# MAGIC an "outrigger" onto a reference dimension shared with `dim_drivers`.
+# MAGIC
 # MAGIC 1. Read silver `constructors` table
 # MAGIC 1. Read gold `ref_nationality_region` table
 # MAGIC 1. Join the data from `constructors` with `ref_nationality_region` using `nationality`
@@ -60,8 +67,15 @@ ref_nationality_region_df = spark.table(f"{catalog_name}.{gold_schema}.ref_natio
 # MAGIC Select the following columns   
 # MAGIC 1. constructors.constructor_id 
 # MAGIC 1. constructors.constructor_name 
-# MAGIC 1. constructors.nationality 
+# MAGIC 1. constructors.nationality
 # MAGIC 1. ref_nationality_region.region
+# MAGIC
+# MAGIC A `left` join is used here, not `inner`: `ref_nationality_region` is a
+# MAGIC manually maintained lookup, so it may not yet have an entry for every
+# MAGIC nationality present in the source data. A `left` join keeps every
+# MAGIC constructor and simply leaves `nationality_region` null when no mapping
+# MAGIC exists yet, instead of silently dropping the constructor from the
+# MAGIC dimension.
 
 # COMMAND ----------
 
@@ -76,7 +90,7 @@ dim_constructors_df = (
             constructors_df.constructor_id,
             constructors_df.constructor_name,
             constructors_df.nationality,
-            ref_nationality_region_df.region.alias("nationality_region")
+            ref_nationality_region_df.region.alias("nationality_region")  # aliased so it reads unambiguously as a nationality-derived attribute, not a circuit/geographic region
         )
 )
 
@@ -88,6 +102,10 @@ display(dim_constructors_df)
 
 # MAGIC %md
 # MAGIC #### Step 3 - Write the transformed data to the `gold` `dim_constructors` table
+# MAGIC
+# MAGIC `overwrite` fully replaces the table on every run - the same full-refresh
+# MAGIC strategy used across all gold notebooks in this project (see
+# MAGIC `01.Build Races Dimension` for the reasoning).
 
 # COMMAND ----------
 

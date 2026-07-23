@@ -1,14 +1,24 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Ingest sprints.json file
-# MAGIC 1. Read the all the files from the sprints folder using spark dataframe reader API
-# MAGIC 1. Define and enforce schema 
-# MAGIC 1. Add Metadata Columns 
+# MAGIC 1. Read all the files from the sprints folder using spark dataframe reader API
+# MAGIC 1. Define and enforce schema
+# MAGIC 1. Add Metadata Columns
 # MAGIC     - Source File
 # MAGIC     - Ingestion Timestamp
-# MAGIC 1. Write to bronze delta table    
+# MAGIC 1. Write to bronze delta table
 # MAGIC
 # MAGIC > Note: JSON is in multi line format
+# MAGIC
+# MAGIC This notebook is parameterized by `p_batch_id`: each batch's raw files
+# MAGIC live in their own numbered subfolder under `landing_folder_path`, and
+# MAGIC `source_file` below points at the batch's whole `sprints` folder
+# MAGIC rather than a single file, since a batch's sprint results can be split
+# MAGIC across multiple multi-line JSON files. The write step uses
+# MAGIC `write_to_bronze` (`00-common/02.bronze-helpers`), which overwrites
+# MAGIC only this batch's own partition of the `sprints` bronze table via
+# MAGIC Delta's `replaceWhere` - re-running this notebook for one batch never
+# MAGIC touches any other batch's rows already loaded.
 
 # COMMAND ----------
 
