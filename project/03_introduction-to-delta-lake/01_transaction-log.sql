@@ -46,13 +46,88 @@
 
 -- COMMAND ----------
 
+-- MAGIC %python
+-- MAGIC
+-- MAGIC from datetime import datetime
+-- MAGIC import traceback
+-- MAGIC
+-- MAGIC queries = [
+-- MAGIC     ("CURRENT USER", "SELECT current_user() AS current_user"),
+-- MAGIC     ("STORAGE CREDENTIALS", "SHOW STORAGE CREDENTIALS"),
+-- MAGIC     ("EXTERNAL LOCATIONS", "SHOW EXTERNAL LOCATIONS"),
+-- MAGIC     (
+-- MAGIC         "EXTERNAL LOCATION DETAILS",
+-- MAGIC         "DESCRIBE EXTERNAL LOCATION databricks_course"
+-- MAGIC     ),
+-- MAGIC     (
+-- MAGIC         "EXTERNAL LOCATION GRANTS",
+-- MAGIC         "SHOW GRANTS ON EXTERNAL LOCATION databricks_course"
+-- MAGIC     ),
+-- MAGIC ]
+-- MAGIC
+-- MAGIC print("=" * 120)
+-- MAGIC print("UNITY CATALOG STORAGE DIAGNOSTICS")
+-- MAGIC print(f"Executed at: {datetime.now()}")
+-- MAGIC print("=" * 120)
+-- MAGIC
+-- MAGIC for title, sql_query in queries:
+-- MAGIC     print(f"\n{'=' * 120}")
+-- MAGIC     print(title)
+-- MAGIC     print("-" * 120)
+-- MAGIC     print(f"SQL: {sql_query};")
+-- MAGIC     print("-" * 120)
+-- MAGIC
+-- MAGIC     try:
+-- MAGIC         df = spark.sql(sql_query)
+-- MAGIC
+-- MAGIC         print("Schema:")
+-- MAGIC         for field in df.schema.fields:
+-- MAGIC             print(f"  - {field.name}: {field.dataType.simpleString()}")
+-- MAGIC
+-- MAGIC         rows = df.collect()
+-- MAGIC
+-- MAGIC         print(f"\nNumber of rows: {len(rows)}")
+-- MAGIC
+-- MAGIC         if not rows:
+-- MAGIC             print("  <NO ROWS RETURNED>")
+-- MAGIC         else:
+-- MAGIC             for row_number, row in enumerate(rows, start=1):
+-- MAGIC                 print(f"\nRow {row_number}:")
+-- MAGIC                 row_dict = row.asDict(recursive=True)
+-- MAGIC
+-- MAGIC                 for column, value in row_dict.items():
+-- MAGIC                     print(f"  {column}: {value}")
+-- MAGIC
+-- MAGIC         print(f"\nSTATUS: SUCCESS — {title}")
+-- MAGIC
+-- MAGIC     except Exception as error:
+-- MAGIC         print(f"\nSTATUS: FAILED — {title}")
+-- MAGIC         print(f"ERROR TYPE: {type(error).__name__}")
+-- MAGIC         print(f"ERROR MESSAGE: {error}")
+-- MAGIC         traceback.print_exc(limit=5)
+-- MAGIC
+-- MAGIC print(f"\n{'=' * 120}")
+-- MAGIC print("DIAGNOSTICS COMPLETED")
+-- MAGIC print("=" * 120)
+
+-- COMMAND ----------
+
 CREATE CATALOG IF NOT EXISTS demo
 MANAGED LOCATION 'abfss://demo@databrickscourseextdl1.dfs.core.windows.net/';
 
 -- COMMAND ----------
 
-CREATE SCHEMA IF NOT EXISTS demo.delta_lake
-MANAGED LOCATION 'abfss://demo@databrickscourseextdl1.dfs.core.windows.net/delta_lake';
+CREATE CATALOG IF NOT EXISTS demo
+MANAGED LOCATION
+'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/demo_catalog';
+
+CREATE SCHEMA IF NOT EXISTS demo.delta_lake;
+
+USE CATALOG demo;
+USE SCHEMA delta_lake;
+
+DESCRIBE CATALOG EXTENDED demo;
+DESCRIBE SCHEMA EXTENDED demo.delta_lake;
 
 -- COMMAND ----------
 

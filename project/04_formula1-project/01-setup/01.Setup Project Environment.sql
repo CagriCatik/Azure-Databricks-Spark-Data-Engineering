@@ -39,6 +39,21 @@
 
 -- COMMAND ----------
 
+-- MAGIC %python
+-- MAGIC
+-- MAGIC location = spark.sql(
+-- MAGIC     "DESCRIBE EXTERNAL LOCATION databricks_course"
+-- MAGIC ).first()
+-- MAGIC
+-- MAGIC base_url = location["url"].rstrip("/")
+-- MAGIC
+-- MAGIC print(f"External location : {location['name']}")
+-- MAGIC print(f"Storage credential: {location['credential_name']}")
+-- MAGIC print(f"Base URL          : {base_url}")
+-- MAGIC print(f"Owner             : {location['owner']}")
+
+-- COMMAND ----------
+
 -- MAGIC %md
 -- MAGIC ### Create External Location
 -- MAGIC
@@ -63,13 +78,6 @@
 
 -- COMMAND ----------
 
-CREATE EXTERNAL LOCATION IF NOT EXISTS databricks_course_ext_dl1_formula1
-URL 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/'
-WITH (STORAGE CREDENTIAL `databricks-course-sc`)
-COMMENT 'External location for the formula1 container';
-
--- COMMAND ----------
-
 -- MAGIC %md
 -- MAGIC ### Create Catalog formula1
 -- MAGIC
@@ -88,13 +96,16 @@ COMMENT 'External location for the formula1 container';
 
 -- COMMAND ----------
 
-SHOW CATALOGS;
+CREATE CATALOG IF NOT EXISTS formula1
+   MANAGED LOCATION 'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/formula1/managed';
 
 -- COMMAND ----------
 
-CREATE CATALOG IF NOT EXISTS formula1
-   MANAGED LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/'
-   COMMENT 'This is the main catalog for the formula1 project' ;
+DESCRIBE CATALOG EXTENDED formula1;
+
+-- COMMAND ----------
+
+SHOW CATALOGS;
 
 -- COMMAND ----------
 
@@ -119,11 +130,11 @@ CREATE CATALOG IF NOT EXISTS formula1
 
 CREATE SCHEMA IF NOT EXISTS formula1.landing;
 CREATE SCHEMA IF NOT EXISTS formula1.bronze
-    MANAGED LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/bronze';
+    MANAGED LOCATION 'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/formula1/managed/bronze';
 CREATE SCHEMA IF NOT EXISTS formula1.silver
-    MANAGED LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/silver';
+    MANAGED LOCATION 'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/formula1/managed/silver';
 CREATE SCHEMA IF NOT EXISTS formula1.gold
-    MANAGED LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/gold';
+    MANAGED LOCATION 'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/formula1/managed/gold';
 
 -- COMMAND ----------
 
@@ -159,9 +170,31 @@ SHOW SCHEMAS;
 
 -- COMMAND ----------
 
-CREATE EXTERNAL VOLUME formula1.landing.files
-LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/landing';
+CREATE EXTERNAL VOLUME IF NOT EXISTS formula1.landing.files
+LOCATION 'abfss://unity-catalog-storage@dbstorage53ch6unudau4i.dfs.core.windows.net/7405613508502640/formula1/external/landing'
+COMMENT 'External landing volume for Formula 1 source files';
 
 -- COMMAND ----------
 
 -- MAGIC %fs ls /Volumes/formula1/landing/files
+
+-- COMMAND ----------
+
+-- MAGIC %python
+-- MAGIC
+-- MAGIC volume_path = "/Volumes/formula1/landing/files"
+-- MAGIC test_file = f"{volume_path}/_setup_test.txt"
+-- MAGIC
+-- MAGIC dbutils.fs.put(
+-- MAGIC     test_file,
+-- MAGIC     "Formula 1 landing volume is working.\n",
+-- MAGIC     overwrite=True
+-- MAGIC )
+-- MAGIC
+-- MAGIC print(dbutils.fs.head(test_file))
+-- MAGIC
+-- MAGIC display(dbutils.fs.ls(volume_path))
+
+-- COMMAND ----------
+
+DESCRIBE VOLUME formula1.landing.files;

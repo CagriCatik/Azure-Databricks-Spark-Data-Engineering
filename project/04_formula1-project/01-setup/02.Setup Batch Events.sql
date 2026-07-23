@@ -34,7 +34,7 @@
 -- COMMAND ----------
 
 CREATE SCHEMA IF NOT EXISTS formula1.control
-    MANAGED LOCATION 'abfss://formula1@databrickscourseextdl1.dfs.core.windows.net/control';
+COMMENT 'Control and orchestration metadata for the Formula 1 project';
 
 -- COMMAND ----------
 
@@ -49,11 +49,21 @@ CREATE SCHEMA IF NOT EXISTS formula1.control
 
 -- COMMAND ----------
 
+
+
+-- Create the managed Delta table.
 CREATE TABLE IF NOT EXISTS formula1.control.batch_events
 (
-    batch_id INT,
+    batch_id        INT,
     event_timestamp TIMESTAMP
-);
+)
+USING DELTA
+COMMENT 'Records Formula 1 batch-processing events';
+
+-- 3. Verify the objects.
+SHOW SCHEMAS IN formula1;
+
+DESCRIBE TABLE EXTENDED formula1.control.batch_events;
 
 -- COMMAND ----------
 

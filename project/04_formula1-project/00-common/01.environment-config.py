@@ -27,15 +27,14 @@
 # Every downstream notebook builds its fully qualified table name from these
 # constants, e.g. f"{catalog_name}.{bronze_schema}.circuits", rather than a
 # hardcoded literal - so a single rename here propagates everywhere.
-catalog_name = 'formula1'
-bronze_schema = 'bronze'
-silver_schema = 'silver'
-gold_schema = 'gold'
-
-# COMMAND ----------
+catalog_name = "formula1"
+bronze_schema = "bronze"
+silver_schema = "silver"
+gold_schema = "gold"
 
 # Unity Catalog volume path for the raw landing files, in the standard
 # /Volumes/<catalog>/<schema>/<volume> form. This volume is an EXTERNAL volume
 # (raw files are dropped here by a process outside Databricks) - see
 # 01-setup/01.Setup Project Environment.sql for how it is created.
-landing_folder_path = '/Volumes/formula1/landing/files'
+
+landing_folder_path = "/Volumes/formula1/landing/files"
