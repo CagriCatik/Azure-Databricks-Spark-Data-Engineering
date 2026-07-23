@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "1"
+# ///
 # MAGIC %md
 # MAGIC # Transform Circuits Data
 # MAGIC
@@ -239,6 +243,3 @@ display(circuits_final_df)
 # COMMAND ----------
 
 display(spark.table(silver_table))
-
-# COMMAND ----------
-
